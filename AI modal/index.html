@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI PDF Question Answering</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .questions-container {
+            margin-bottom: 15px;
+        }
+
+        .question-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .question-item input {
+            flex: 1;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-remove {
+            background: #ff4757;
+            color: white;
+            padding: 12px 20px;
+        }
+
+        .btn-remove:hover {
+            background: #ff3838;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .answer-card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .question {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .answer {
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .error {
+            background: #fff5f5;
+            border-left-color: #ff4757;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+
+        .info-box p {
+            margin: 5px 0;
+            color: #0c5460;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AI PDF Question Answering</h1>
+        <p class="subtitle">Upload any PDF URL and ask questions - AI will answer!</p>
+
+        <div class="info-box">
+            <p><strong>📌 How to use:</strong></p>
+            <p>1. Paste a PDF URL (must be publicly accessible)</p>
+            <p>2. Add your questions (click + to add more)</p>
+            <p>3. Click "Get Answers" and wait for AI response</p>
+        </div>
+
+        <form id="qaForm">
+            <div class="form-group">
+                <label for="pdfUrl">📄 PDF URL</label>
+                <input 
+                    type="text" 
+                    id="pdfUrl" 
+                    placeholder="https://example.com/document.pdf"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label>❓ Questions</label>
+                <div id="questionsContainer" class="questions-container">
+                    <div class="question-item">
+                        <input 
+                            type="text" 
+                            class="question-input" 
+                            placeholder="What is this document about?"
+                            required
+                        >
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="addQuestion()">
+                    + Add Question
+                </button>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary">
+                    🚀 Get Answers
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="clearForm()">
+                    🔄 Clear
+                </button>
+            </div>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing PDF and generating answers...</p>
+        </div>
+
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api/answer';
+
+        function addQuestion() {
+            const container = document.getElementById('questionsContainer');
+            const questionItem = document.createElement('div');
+            questionItem.className = 'question-item';
+            
+            questionItem.innerHTML = `
+                <input 
+                    type="text" 
+                    class="question-input" 
+                    placeholder="Enter your question..."
+                    required
+                >
+                <button type="button" class="btn btn-remove" onclick="removeQuestion(this)">
+                    ✕
+                </button>
+            `;
+            
+            container.appendChild(questionItem);
+        }
+
+        function removeQuestion(button) {
+            const container = document.getElementById('questionsContainer');
+            if (container.children.length > 1) {
+                button.parentElement.remove();
+            } else {
+                alert('At least one question is required!');
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('qaForm').reset();
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = `
+                <div class="question-item">
+                    <input 
+                        type="text" 
+                        class="question-input" 
+                        placeholder="What is this document about?"
+                        required
+                    >
+                </div>
+            `;
+            document.getElementById('results').style.display = 'none';
+        }
+
+        document.getElementById('qaForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const pdfUrl = document.getElementById('pdfUrl').value.trim();
+            const questionInputs = document.querySelectorAll('.question-input');
+            const questions = Array.from(questionInputs)
+                .map(input => input.value.trim())
+                .filter(q => q.length > 0);
+
+            if (questions.length === 0) {
+                alert('Please add at least one question!');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        pdf_url: pdfUrl,
+                        questions: questions
+                    })
+                });
+
+                const data = await response.json();
+
+                // Hide loading
+                document.getElementById('loading').style.display = 'none';
+
+                // Display results
+                displayResults(data);
+
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                alert('Error: ' + error.message + '\n\nMake sure the server is running on http://localhost:8000');
+            }
+        });
+
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.style.display = 'block';
+
+            if (!data.success) {
+                resultsDiv.innerHTML = `
+                    <div class="answer-card error">
+                        <span class="status-badge status-error">Error</span>
+                        <p><strong>Error:</strong> ${data.error || 'Unknown error occurred'}</p>
+                        ${data.details ? `<p><strong>Details:</strong> ${data.details}</p>` : ''}
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <h3 style="margin-bottom: 20px; color: #333;">
+                    ✅ Results (${data.total_questions} questions)
+                </h3>
+                <p style="margin-bottom: 20px; color: #666;">
+                    <strong>Model:</strong> ${data.model_used} | 
+                    <strong>PDF Processed:</strong> ${data.pdf_processed ? 'Yes' : 'No'}
+                </p>
+            `;
+
+            data.answers.forEach((item) => {
+                const isError = item.status !== 'success';
+                html += `
+                    <div class="answer-card ${isError ? 'error' : ''}">
+                        <span class="status-badge ${isError ? 'status-error' : 'status-success'}">
+                            ${item.status}
+                        </span>
+                        <div class="question">
+                            Q${item.question_number}: ${item.question}
+                        </div>
+                        <div class="answer">
+                            ${isError && item.error_message 
+                                ? `<strong>Error:</strong> ${item.error_message}` 
+                                : item.answer || 'No answer provided'}
+                        </div>
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
